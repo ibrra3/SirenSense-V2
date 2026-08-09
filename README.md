@@ -1,214 +1,98 @@
-# SirenSense: Urban Ambulance Acoustic Detection System
+# SirenSense V2
 
-SirenSense is an open-source, Edge-AI acoustic monitoring node designed for Smart City intersections. Its primary goal is to autonomously detect the presence of approaching ambulances in heavy traffic and transmit preemptive alerts to municipal traffic light controllers, reducing emergency response times and preventing intersection collisions.
+**Offline acoustic intelligence and driver-assistance platform**
 
-## 🚀 Overview
+[Website](https://sirensense.es) · [Early firmware prototype](https://github.com/ibrra3/SirenSense) · [Project video](https://www.youtube.com/watch?v=NpQYkkEUuDs)
 
-Unlike vision-based systems that fail in blind spots, occlusions, or poor weather conditions, SirenSense relies purely on acoustic signatures. By leveraging TinyML on low-cost microcontrollers, the system continuously listens to the urban soundscape, classifies specific ambulance siren patterns (like wail, yelp, and two-tone), and broadcasts hardware-level alerts via Long Range (LoRa) radio.
+SirenSense helps drivers notice, identify and locate approaching emergency vehicles when traffic, cabin noise or reflections between buildings make a siren difficult to interpret. The core system processes audio locally, classifies the acoustic event and presents a directional warning without depending on cloud inference.
 
-This repository contains the firmware and machine learning deployment code required to build a standalone intersection monitoring node.
+The project received **first prize at Hack4Change 2026** at the ETSII, Universidad de Sevilla.
 
-## 🛠️ Hardware Architecture
+## Why this project exists
 
-The hardware is designed to be mounted on traffic poles and is built around a low-power, high-efficiency edge processing unit:
+Hearing a siren does not always reveal where it is coming from. Reflections in narrow streets can create a misleading direction, while music, insulation or hearing loss can delay detection altogether. SirenSense approaches the problem as a complete embedded system: microphone timing, signal processing, edge inference, power integrity, wireless communication and the driver interface all have to work together.
 
-- **Core Processor:** ESP32-S3-N16R8 (Dual-core, optimized for digital signal processing and AI workloads).
-- **Acoustic Sensors:** INMP441 Digital I2S MEMS Microphones for high SNR audio capture.
-- **Telemetry & Comms:** LoRa SX1278 RA-02 (433MHz) transceiver for long-range, low-power transmission to traffic infrastructure.
-- **Diagnostics Display:** 2.42" OLED display via I2C/SPI for on-site maintenance, calibration, and debugging.
-- **Environmental Monitoring:** DS18B20 1-Wire temperature sensor to monitor outdoor enclosure conditions and prevent overheating.
+## System architecture
 
-## 🧠 Software & AI Pipeline
-
-- **Digital Signal Processing (DSP):** The system samples I2S audio and computes Mel-Filterbank Energy (MFE) spectrograms. This isolates the critical 600Hz-1500Hz frequency range typical of ambulance sirens, effectively filtering out standard urban background noise like wind, engines, and voices.
-- **TinyML Classification:** A Convolutional Neural Network (CNN) runs directly on the ESP32-S3. It processes the spectrograms locally and offline, classifying the audio into "Siren" or "Noise" with high confidence.
-- **Privacy by Design:** To ensure public privacy and bandwidth efficiency, no raw audio is ever recorded or uploaded. Only the binary classification trigger and a timestamp are transmitted over the LoRa network.
-
-## ⚙️ Getting Started
-
-### Prerequisites
-
-- ESP-IDF v5.0+ or PlatformIO
-- C++14 compatible compiler
-- Edge Impulse Inferencing Library (for the ESP32)
-
-### Installation & Wiring
-
-1. Clone the repository:
-    
-    ```
-    git clone https://github.com/yourusername/SirenSense-Urban.git
-    ```
-    
-2. Wire the INMP441 microphones to the ESP32-S3 I2S pins. Ensure the L/R channel selection is properly grounded or pulled to 3.3V depending on your schematic.
-3. Connect the LoRa SX1278 module via SPI.
-4. Build and flash the firmware to your ESP32-S3 development board.
-5. Monitor the serial output at `115200` baud rate to view the real-time AI confidence scores and DSP extraction times.
-
-
----
-
-```
-# SirenSense-Urban: Edge-AI Acoustic Node for Smart Intersections 🚑🚦
-
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Platform](https://img.shields.io/badge/platform-ESP--IDF%20v5.0-blue)
-![Hardware](https://img.shields.io/badge/hardware-ESP32--S3-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
-
-**SirenSense-Urban** is an open-source, privacy-preserving acoustic monitoring node designed to preemptively detect approaching emergency vehicles (ambulances, fire trucks, police) in dense urban environments.
-
-By deploying these low-cost nodes on traffic light poles, municipalities can interface directly with traffic controllers via Long Range (LoRa) radio to switch lights to green *before* the emergency vehicle enters the intersection, drastically reducing response times and preventing fatal collisions.
-
----
-
-## 📖 Table of Contents
-- [Why Acoustic Detection?](#why-acoustic-detection)
-- [System Architecture](#system-architecture)
-- [Hardware Bill of Materials (BOM)](#hardware-bill-of-materials-bom)
-- [Software & RTOS Pipeline](#software--rtos-pipeline)
-- [Wiring & Schematic](#wiring--schematic)
-- [Installation & Flashing](#installation--flashing)
-- [LoRa Payload Structure](#lora-payload-structure)
-- [Contributing](#contributing)
-
----
-
-## 🎯 Why Acoustic Detection?
-Traditional emergency preemption systems rely on optical strobes (which fail around blind corners or in heavy fog) or cloud-connected GPS (which suffers from urban canyon multipath delays).
-
-SirenSense relies purely on **acoustic signatures**. Sound waves diffract around buildings, allowing the system to "hear" an ambulance approaching blocks away, even when completely occluded from the intersection's line of sight. To ensure **100% citizen privacy**, no raw audio is ever recorded, saved, or transmitted. All microphone data is processed locally on the edge via TinyML, and only a binary "Siren Detected" trigger is transmitted over the air.
-
----
-
-## 🧠 System Architecture
-
-The node operates on a strictly constrained power and memory budget, utilizing a dual-core architecture to prevent audio sampling bottlenecks.
-
-1. **Audio Acquisition:** A stereo pair of digital MEMS microphones captures ambient street noise via an I2S bus. Direct Memory Access (DMA) ring buffers are used to prevent CPU blocking.
-2. **Digital Signal Processing (DSP):** Raw PCM audio is windowed and transformed into Mel-Filterbank Energy (MFE) spectrograms, isolating the 600 Hz – 1500 Hz frequency bands where siren sweeps (wail, yelp, hi-lo) reside.
-3. **Machine Learning Inference:** A lightweight Convolutional Neural Network (CNN) analyzes the spectrograms in real-time to classify the acoustic event, rejecting background noise like heavy wind, car horns, and construction.
-4. **Wireless Telemetry:** Upon a positive classification with >85% confidence, an encrypted interrupt packet is broadcasted via a 433MHz LoRa transceiver to the intersection's main traffic controller.
-
----
-
-## 🛠️ Hardware Bill of Materials (BOM)
-
-| Component | Description | Protocol/Logic |
-| :--- | :--- | :--- |
-| **ESP32-S3-WROOM-1-N16R8** | Dual-core Tensilica LX7 MCU | 3.3V Logic |
-| **INMP441 (x2)** | Digital Bottom-Ported MEMS Microphones | I2S |
-| **SX1278 RA-02** | Long Range (LoRa) Transceiver Module | SPI (433MHz) |
-| **SSD1306 2.42"** | Diagnostic OLED Display | I2C |
-| **DS18B20** | Weatherproof Temperature Sensor | 1-Wire |
-
-*Note: The hardware is designed to be housed in a 3D-printed, acoustically transparent weatherproof dome.*
-
----
-
-## ⚙️ Software & RTOS Pipeline
-The firmware is built using **FreeRTOS** on the ESP-IDF. To maintain sub-100ms latency, tasks are strictly pinned to specific cores:
-
-* **Core 0 (Control & I/O):**
-  * `task_i2s_dma_read`: Manages continuous double-buffered audio sampling.
-  * `task_lora_tx`: Handles radio state machine and MAC layer transmission.
-  * `task_sensors`: Polls the DS18B20 to monitor internal enclosure temperatures.
-* **Core 1 (Math & ML Workloads):**
-  * `task_dsp_compute`: Executes STFT and Mel-spectrogram generation.
-  * `task_edge_impulse_infer`: Runs the quantized TensorFlow Lite Micro (TFLite) CNN model.
-
----
-
-## 🔌 Wiring & Schematic
-
-### I2S Microphone Array (Stereo Configuration)
-To achieve synchronized stereo sampling for future Time Difference of Arrival (TDOA) updates, both microphones share the same clock lines, but the `L/R` channels are pulled to opposite logic levels.
-
-| INMP441 Pin | ESP32-S3 Pin | Notes |
-| :--- | :--- | :--- |
-| **VDD** | 3.3V | Require 100nF decoupling capacitor |
-| **GND** | GND | Star-ground configuration |
-| **SCK (BCLK)** | GPIO 41 | Shared between both mics |
-| **WS (LRCLK)**| GPIO 42 | Shared between both mics |
-| **SD (DATA)** | GPIO 2 | Shared data line |
-| **L/R (Mic 1)** | GND | Sets Mic 1 to Left Channel |
-| **L/R (Mic 2)** | 3.3V | Sets Mic 2 to Right Channel |
-
-### LoRa SX1278 (SPI)
-| SX1278 Pin | ESP32-S3 Pin |
-| :--- | :--- |
-| **MOSI** | GPIO 11 |
-| **MISO** | GPIO 13 |
-| **SCK** | GPIO 12 |
-| **NSS (CS)** | GPIO 10 |
-| **DIO0 (IRQ)** | GPIO 9 |
-
----
-
-## 🚀 Installation & Flashing
-
-### Prerequisites
-* Ensure you have [ESP-IDF v5.0+](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/get-started/) installed and configured.
-* Python 3.8+ for deployment scripts.
-
-### Build Instructions
-1. Clone the repository and update submodules:
-   ```bash
-   git clone https://github.com/YourUsername/SirenSense-Urban.git
-   cd SirenSense-Urban
-   git submodule update --init --recursive
+```text
+Four-microphone roof array
+  ESP32-S3 + Edge AI + GCC-PHAT/TDOA
+                 |
+              ESP-NOW
+                 |
+Cabin controller             Emergency-vehicle transponder
+  ESP32-S3 <---- LoRa ---->  ESP32-S3 + GPS
+       |
+  UART JSON
+       |
+Raspberry Pi Zero 2 W HUD
+  alerts, GPS, offline map, diagnostics and camera modules
 ```
 
-2. Set the target to ESP32-S3:
-    
-    ```
-    idf.py set-target esp32s3
-    ```
-    
-3. Configure the environment variables (LoRa frequency, mic gain):
-    
-    ```
-    idf.py menuconfig
-    # Navigate to "SirenSense Node Configuration"
-    ```
-    
-4. Build, flash, and monitor the serial output:
-    
-    ```
-    idf.py build flash monitor
-    ```
-    
+### Roof acoustic node
 
----
+One ESP32-S3 captures four INMP441 microphones through two synchronized I2S controllers. Each I2S data line carries two microphones by assigning one microphone to the left slot and the other to the right slot. The two buses share clock timing through the ESP32-S3 GPIO matrix, use deterministic startup ordering and run a per-boot alignment and health check.
 
-## 📡 LoRa Payload Structure
+The processing pipeline combines an Edge Impulse Conv1D classifier with GCC-PHAT time-difference-of-arrival estimation. Spectral zero-padding and parabolic refinement provide sub-sample delay estimates, while a coherence gate suppresses bearings that are not trustworthy.
 
-To minimize airtime and comply with ISM band duty-cycle regulations, the alert payload is heavily compressed into an 8-byte hexadecimal string.
+### Cabin controller and HUD
 
-**Byte Layout:** `[Node_ID (2B)] [Event_Type (1B)] [Confidence (1B)] [Temp (1B)] [Battery_mV (2B)] [Checksum (1B)]`
+The cabin unit combines an ESP32-S3 controller with a Raspberry Pi Zero 2 W display system. The microcontroller owns the real-time peripherals and forwards normalized telemetry to the Pi using newline-delimited JSON over UART. The Pi renders the driver interface and can also run independently in simulation mode for development and testing.
 
-**Example Payload:** `0x4A1C 0x02 0x5F 0x1A 0x0CE4 0x8B`
+## Product functions
 
-- `0x4A1C` -> Node ID: 18972 (Intersection 5th & Main)
-- `0x02` -> Event: Yelp Siren Detected
-- `0x5F` -> ML Confidence: 95%
-- `0x1A` -> Enclosure Temp: 26°C
-- `0x0CE4` -> Battery: 3300 mV (3.3V)
-- `0x8B` -> CRC8 Checksum
+The project is larger than siren detection alone. The current prototype and its validated software modules cover:
 
----
+1. Offline siren detection and acoustic-event classification
+2. 360-degree direction estimation from a four-microphone array
+3. Priority driver alerts for acoustic detections and RF beacons
+4. LoRa emergency-vehicle beacon and transponder architecture
+5. GPS speed, course and position display
+6. NAJM offline mapping with track-up and north-up modes
+7. Close-range radar alert integration
+8. Driver-fatigue monitoring and priority warning overlays
+9. Dashcam, event gallery and incident-logging modules
+10. Environmental and system telemetry, including air-quality and temperature inputs
+11. Voice alerts, microSD event logging and diagnostics
+12. Experimental V16-style emergency beacon mode
 
-## 🤝 Contributing
+Some modules are still under validation. SirenSense is an engineering prototype, not a certified automotive, V16 or emergency-services product.
 
-We welcome pull requests from acoustic engineers, embedded developers, and urban planners. If you are submitting DSP optimizations or new TFLite models, please ensure your changes do not exceed the 100ms processing latency constraint.
+## Hardware engineering
 
-See `CONTRIBUTING.md` for our code of conduct and branching guidelines.
+The electronics were designed in KiCad and include custom main and microphone PCBs. The roof unit uses a LiFePO4 power system with battery protection, charging, DC conversion and a separately filtered microphone rail. Decoupling capacitors and ferrite beads were added close to the digital microphones to reduce conducted noise and stabilize audio capture.
 
-## 🚧 Future Roadmap
+Key components include:
 
-- **Direction of Arrival (DoA):** Implementing a Time Difference of Arrival (TDOA) algorithm to calculate exactly which street the ambulance is approaching from.
-- **Solar Integration:** Adding a deep-sleep polling routine and a TP5000 charging circuit for completely off-grid solar-powered operation.
+* ESP32-S3-WROOM-1-N16R8 modules
+* Four INMP441 digital MEMS microphones
+* Raspberry Pi Zero 2 W cabin computer
+* SX1278 LoRa radio and GPS modules
+* LiFePO4 battery, BMS, TP5000 charger and MT3608 conversion stage
+* Custom KiCad PCBs and microphone interconnect boards
 
-## 🛡️ License
+## Engineering status
 
-Distributed under the MIT License. See `LICENSE` for more information.
+| Area | Current state |
+| --- | --- |
+| Offline siren classification | Implemented and demonstrated |
+| Four-channel audio acquisition | Implemented with two I2S stereo buses |
+| Direction-finding pipeline | Implemented; final vehicle-axis field calibration remains |
+| Custom electronics | Designed, fabricated and assembled for the prototype |
+| Pi HUD and offline map | Working software prototype with simulation support |
+| Camera integration | Software implemented; hardware capture reliability still being investigated |
+| LoRa security | Prototype architecture; production key provisioning is not finalized |
+| Automotive certification | Not started; this is not a production safety device |
+
+## Repository scope
+
+This repository is the public engineering case study for V2. The project spans several hardware nodes and software environments, and the source is being consolidated into clean, reproducible modules before broader release. The earlier ESP32 firmware iteration remains available in the [SirenSense repository](https://github.com/ibrra3/SirenSense), while the product overview and demonstrations are published at [sirensense.es](https://sirensense.es).
+
+## Technical stack
+
+`C` · `C++` · `Python` · `ESP32-S3` · `FreeRTOS` · `PlatformIO` · `ESP-IDF` · `Edge Impulse` · `GCC-PHAT` · `I2S` · `ESP-NOW` · `LoRa` · `UART` · `Raspberry Pi` · `KiCad`
+
+## Author
+
+Designed and built by **Ibrahim Najjar**, with a focus on embedded systems, real-time firmware, edge AI and electronics.
+
